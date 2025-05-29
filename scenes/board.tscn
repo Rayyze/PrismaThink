@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3 uid="uid://chwy0q2ywkmt3"]
+
+[ext_resource type="Script" uid="uid://dxmm1midi0o0r" path="res://scripts/board.gd" id="1_tx6nw"]
+[ext_resource type="Shader" uid="uid://dgq11i8b038lb" path="res://shaders/dot_grid.gdshader" id="2_nglv8"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fv4ni"]
+shader = ExtResource("2_nglv8")
+shader_parameter/background_color = Color(0.95628, 0.908278, 0.91452, 1)
+shader_parameter/dot_color = Color(0.439049, 0.439049, 0.439049, 1)
+shader_parameter/spacing = 32.0
+shader_parameter/dot_radius = 1.5
+
+[node name="Board" type="Node2D"]
+script = ExtResource("1_tx6nw")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_fv4ni")
