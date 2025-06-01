@@ -3,15 +3,24 @@
 [ext_resource type="Script" uid="uid://dxmm1midi0o0r" path="res://scripts/board.gd" id="1_tx6nw"]
 [ext_resource type="Shader" uid="uid://dgq11i8b038lb" path="res://shaders/dot_grid.gdshader" id="2_nglv8"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_fv4ni"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tx6nw"]
 shader = ExtResource("2_nglv8")
-shader_parameter/background_color = Color(0.95628, 0.908278, 0.91452, 1)
-shader_parameter/dot_color = Color(0.439049, 0.439049, 0.439049, 1)
-shader_parameter/spacing = 32.0
-shader_parameter/dot_radius = 1.5
+shader_parameter/background_color = Color(0.910391, 0.914182, 0.906662, 1)
+shader_parameter/dot_color = Color(0.270588, 0.270588, 0.270588, 0.878431)
+shader_parameter/spacing = 64.0
+shader_parameter/dot_radius = 2.0
+shader_parameter/offset = Vector2(0, 0)
+shader_parameter/zoom = 1.0
 
 [node name="Board" type="Node2D"]
 script = ExtResource("1_tx6nw")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-material = SubResource("ShaderMaterial_fv4ni")
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Background" type="ColorRect" parent="CanvasLayer"]
+material = SubResource("ShaderMaterial_tx6nw")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
