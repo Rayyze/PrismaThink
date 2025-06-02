@@ -38,11 +38,11 @@ func apply_style(from: int, to: int, new_style: Array) -> void:
 			# Middle part (apply style)
 			var mid_text: String = text.substr(local_from, local_to - local_from)
 			var mid_style: Array = style.duplicate()
-			for s in new_style:
-				if not mid_style.has(s):
-					mid_style.append(s)
+			for tag in new_style:
+				if not mid_style.has(tag):
+					style = add_tag_to_style(style, tag)
 				else:
-					mid_style.erase(s)
+					mid_style.erase(tag)
 			new_segments.append({"text": mid_text, "style": mid_style})
 			
 			# Right part (after selection)
@@ -51,6 +51,18 @@ func apply_style(from: int, to: int, new_style: Array) -> void:
 			
 		cursor += text.length()
 	segments = merge_adjacent_segments(new_segments)
+
+func add_tag_to_style(old_style: Array, new_tag: Dictionary) -> Array:
+	var style = old_style.duplicate()
+	var replaced = false
+	for tag in style:
+		if tag["name"] == new_tag["name"]:
+			tag = new_tag
+			replaced = true
+			break
+	if not replaced:
+		style.append(new_tag)
+	return style
 
 func merge_adjacent_segments(input: Array) -> Array:
 	if input.is_empty():
@@ -84,7 +96,7 @@ func segment_to_bbcode(segment: Dictionary) -> String:
 	var opening = ""
 	var closing = ""
 
-	for tag in segment["tags"]:
+	for tag in segment["style"]:
 		if tag.has("value"):
 			opening += "[%s=%s]" % [tag["name"], tag["value"]]
 		else:
