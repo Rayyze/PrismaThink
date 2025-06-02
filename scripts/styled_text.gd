@@ -65,15 +65,32 @@ func merge_adjacent_segments(input: Array) -> Array:
 		else:
 			result.append(current)
 	return result
-	
+
+func styles_equal(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for tag in a:
+		if not b.has(tag):
+			return false
+	return true
+
 func to_bbcode() -> String:
 	var result = ""
 	for seg in segments:
-		var prefix = ""
-		var suffix = ""
-		for tag in seg["style"]:
-			prefix += "[" + tag + "]"
-		for tag in seg["style"].duplicate().reverse():
-			suffix += "[/" + tag + "]"
-		result += prefix + seg["text"] + suffix
+		result += segment_to_bbcode(seg)
 	return result
+
+func segment_to_bbcode(segment: Dictionary) -> String:
+	var opening = ""
+	var closing = ""
+
+	for tag in segment["tags"]:
+		if tag.has("value"):
+			opening += "[%s=%s]" % [tag["name"], tag["value"]]
+		else:
+			opening += "[%s]" % tag["name"]
+
+		if not tag["name"] in ["br", "hr"]:
+			closing = "[/%s]" % tag["name"] + closing
+
+	return opening + segment["text"] + closing
