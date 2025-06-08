@@ -1,0 +1,13 @@
+[gd_resource type="Theme" load_steps=5 format=3 uid="uid://bhrqhkawwpiti"]
+
+[ext_resource type="FontFile" uid="uid://d74cmad8g3qa" path="res://fonts/Inter-Bold.ttf" id="1_fx2g0"]
+[ext_resource type="FontFile" uid="uid://cm6lk33dyregh" path="res://fonts/Inter-BoldItalic.ttf" id="2_nwjvr"]
+[ext_resource type="FontFile" uid="uid://b5innx8csnfu6" path="res://fonts/Inter-Italic.ttf" id="3_r3xux"]
+[ext_resource type="FontFile" uid="uid://56tkn4517wqq" path="res://fonts/Inter-Regular.ttf" id="4_oxkhk"]
+
+[resource]
+default_font = ExtResource("4_oxkhk")
+rich_text_editor/fonts/bold_font = ExtResource("1_fx2g0")
+rich_text_editor/fonts/bold_italic_font = ExtResource("2_nwjvr")
+rich_text_editor/fonts/italic_font = ExtResource("3_r3xux")
+rich_text_editor/fonts/regular_font = ExtResource("4_oxkhk")
