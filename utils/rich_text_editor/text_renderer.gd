@@ -37,17 +37,10 @@ func _draw():
 		var text: String = seg["text"]
 		var style: Array = seg["style"]
 		
+		f = get_font_from_style(style)
 		for s in style:
 			match s.get("type", ""):
-				"b": has_bold = true
-				"i": has_italic = true
 				"color": col = Color(s["value"])
-		if has_bold and has_italic:
-			f = font_bold_italic
-		elif has_bold:
-			f = font_bold
-		elif has_italic:
-			f = font_italic
 
 		f.draw_string(get_canvas_item(), Vector2(x, y + line_height), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
@@ -56,3 +49,19 @@ func _draw():
 
 		x += f.get_string_size(text).x
 		total += text.length()
+
+func get_font_from_style(style: Array):
+	var has_bold: bool = false
+	var has_italic: bool = false
+	for s in style:
+		match s.get("type", ""):
+			"b": has_bold = true
+			"i": has_italic = true
+	if has_bold and has_italic:
+		return font_bold_italic
+	elif has_bold:
+		return font_bold
+	elif has_italic:
+		return font_italic
+	else:
+		return font_regular

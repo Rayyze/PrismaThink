@@ -33,6 +33,28 @@ func _input(event):
 			else:
 				_delete_character(1)
 		update()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		text_renderer.cursor_index = _get_cursor_index_at_pos(event.position)
+		update()
+
+func _get_cursor_index_at_pos(pos: Vector2) -> int:
+	var x := 10
+	var total := 0
+
+	for seg in text_renderer.segments:
+		var text: String = seg["text"]
+		var style: Array = seg["style"]
+		var f: Resource = text_renderer.get_font_from_style(style)
+
+		for i in text.length():
+			var char_width: float = f.get_string_size(text.substr(i, 1)).x
+			if pos.x < x + char_width / 2:
+				return total + i
+			x += char_width
+
+		total += text.length()
+
+	return total
 
 func _insert_character(char):
 	var total: int = 0
