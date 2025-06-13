@@ -19,10 +19,7 @@ func _process(delta):
 		blink_timer = 0.0
 		cursor_visible = !cursor_visible or moved
 		queue_redraw()
-		
+
 func _draw() -> void:
 	if cursor_visible:
-		print("drawing cursor")
-		print(cursor_pos)
-		print(line_height)
 		draw_line(cursor_pos, cursor_pos + Vector2(0, line_height), Color.WHITE, 1)
