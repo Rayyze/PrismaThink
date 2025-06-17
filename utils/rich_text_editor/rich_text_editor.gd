@@ -11,7 +11,6 @@ func _ready():
 	grab_focus()
 
 func _input(event):
-	# TODO refactor variable (except segments)
 	var is_selected: bool = document.selection_start_index != -1 and document.selection_end_index != -1
 	if event is InputEventKey and event.pressed:
 		# Movements
@@ -76,13 +75,14 @@ func _input(event):
 		else:
 			document.selection_start_index = -1
 			document.selection_end_index = -1
-		document.cursor_index = _get_cursor_index_at_pos(event.position)
+		document.cursor_index = new_index
 		print(event.position)
 		update()
 
-func _get_cursor_index_at_pos(pos: Vector2) -> int:
-	var x: float = 10
-	var y: float = 10
+func _get_cursor_index_at_pos(target_pos: Vector2) -> int:
+	var pos: Vector2 = Vector2(10.0, 10.0 + document.font_size/2)
+	var dist: Array = []
+	var indices: Array = []
 	var total: int = 0
 
 	for seg in document.segments:
@@ -91,17 +91,21 @@ func _get_cursor_index_at_pos(pos: Vector2) -> int:
 		var f: Font = text_renderer.get_font_from_style(style)
 		for s in style:
 			if s.get("type", "") == "br":
-				x = 10
-				y += document.font_size
+				pos.x = 10
+				pos.y += document.font_size
 		for i in text.length():
 			var char_code: int = text.unicode_at(i)
 			var char_width: float = f.get_char_size(char_code, document.font_size).x
-			if abs(pos.y - y) < document.font_size:
-				if pos.x < x + char_width / 2:
-					return total
-			x += char_width
+			pos.x += char_width/2
+			dist.append(eucl_dist_sq(pos, target_pos))
+			pos.x += char_width/2
 			total += 1
-	return total
+			indices.append(total)
+	if indices.is_empty():
+		return 0
+	print(dist)
+	return indices[dist.find(dist.min())]
+
 
 func _get_pos_at_index(index: int) -> Vector2:
 	var pos: Vector2 = Vector2(10.0, 10.0)
@@ -256,3 +260,6 @@ func styles_equal(style_a: Array, style_b: Array):
 func update():
 	document.segments = merge_adjacent_segments(clean_empty_segments(document.segments))
 	text_renderer.queue_redraw()
+
+func eucl_dist_sq(a: Vector2, b: Vector2) -> float:
+	return pow(a.x - b.x, 2) + pow(a.y - b.y, 2)
