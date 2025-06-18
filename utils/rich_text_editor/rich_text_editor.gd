@@ -84,31 +84,38 @@ func _get_cursor_index_at_pos(target_pos: Vector2) -> int:
 	var dist: Array = []
 	var indices: Array = []
 	var total: int = 0
+	var same_line_dist: Array = []
+	var same_line_indices: Array = []
 
 	for seg in document.segments:
 		var text: String = seg["text"]
 		var style: Array = seg["style"]
 		var f: Font = text_renderer.get_font_from_style(style)
-		for s in style:
-			if s.get("type", "") == "br":
-				pos.x = 10
-				pos.y += document.font_size
 		for i in text.length():
 			var char_code: int = text.unicode_at(i)
 			var char_width: float = f.get_char_size(char_code, document.font_size).x
 			pos.x += char_width/2
-			dist.append(eucl_dist_sq(pos, target_pos))
+			var d := eucl_dist_sq(pos, target_pos)
+			if abs(pos.y - target_pos.y) < document.font_size * 0.5:
+				same_line_dist.append(d)
+				same_line_indices.append(total)
 			pos.x += char_width/2
 			total += 1
+			dist.append(d)
 			indices.append(total)
-	if indices.is_empty():
+		for s in style:
+			if s.get("type", "") == "br":
+				pos.x = 10
+				pos.y += document.font_size
+	if not same_line_indices.is_empty():
+		return same_line_indices[same_line_dist.find(same_line_dist.min())]
+	elif indices.size() > 0:
+		return indices[dist.find(dist.min())]
+	else:
 		return 0
-	print(dist)
-	return indices[dist.find(dist.min())]
-
 
 func _get_pos_at_index(index: int) -> Vector2:
-	var pos: Vector2 = Vector2(10.0, 10.0)
+	var pos: Vector2 = Vector2(10.0, 10.0 + document.font_size/2)
 	var total: int = 0
 	var found: bool = false
 	for seg in document.segments:
@@ -137,7 +144,6 @@ func get_cursor_index_vertical(direction: int) -> int:
 	print(pos)
 	return _get_cursor_index_at_pos(pos)
 
-	
 func _insert_text_with_style(new_text: String, new_style: Array) -> void:
 	var new_segments: Array = []
 	var total: int = 0
@@ -251,6 +257,10 @@ func clean_empty_segments(input: Array) -> Array:
 			new_segments.append(seg.duplicate(true))
 	return new_segments
 
+func add_trailing_break() -> void:
+	if document.segments.is_empty() or document.segments[-1] != {"text": " ", "style": [{"type": "br"}]}:
+		document.segments.append({"text": " ", "style": [{"type": "br"}]})
+
 func styles_equal(style_a: Array, style_b: Array):
 	for s in style_a:
 		if not style_b.has(s):
@@ -258,6 +268,7 @@ func styles_equal(style_a: Array, style_b: Array):
 	return true
 
 func update():
+	add_trailing_break()
 	document.segments = merge_adjacent_segments(clean_empty_segments(document.segments))
 	text_renderer.queue_redraw()
 
