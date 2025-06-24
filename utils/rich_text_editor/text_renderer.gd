@@ -33,12 +33,18 @@ func _draw():
 		var f: Font = get_font_from_style(style)
 		var new_line: bool = false
 		col = Color.WHITE
+		var has_underline: bool = false
+		var has_strike: bool = false
 
 		for s in style:
 			if s.get("type", "") == "color":
 				col = Color(s["value"])
 			if s.get("type", "") == "br":
 				new_line = true
+			if s.get("type", "") == "u":
+				has_underline = true
+			if s.get("type", "") == "s":
+				has_strike = true
 
 		for i in text.length():
 			var char_string: String = text[i]
@@ -51,6 +57,14 @@ func _draw():
 
 			# Draw character
 			f.draw_string(get_canvas_item(), Vector2(x, y + document.font_size), char_string, HORIZONTAL_ALIGNMENT_LEFT, -1, document.font_size, col)
+
+			# Draw strikethrough and underline
+			if has_underline:
+				var underline_y = y + document.font_size + 1
+				draw_line(Vector2(x, underline_y), Vector2(x + char_width, underline_y), col, 1.0)
+			if has_strike:
+				var strike_y = y + document.font_size * 0.5
+				draw_line(Vector2(x, strike_y), Vector2(x + char_width, strike_y), col, 1.0)
 
 			# Update cursor position
 			if document.cursor_index == total:

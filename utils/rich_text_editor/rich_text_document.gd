@@ -8,5 +8,6 @@ var selection_start_index: int
 var selection_end_index: int
 var segments: Array = [
 	{"text": "Welcome to your note.", "style": []},
-	{"text": "bold", "style": [{"type": "i"}]}
+	{"text": "bold", "style": [{"type": "i"}]},
+	{"text": "t", "style": []}
 ]

@@ -12,57 +12,52 @@ func _ready():
 
 func _input(event):
 	var is_selected: bool = document.selection_start_index != -1 and document.selection_end_index != -1
+	var previous_cursor: int = document.cursor_index
 	if event is InputEventKey and event.pressed:
-		# Movements
-		if event.keycode == KEY_RIGHT:
-			var previous_index = document.cursor_index
-			document.cursor_index = min(_total_length(), document.cursor_index + 1)
-			if event.shift_pressed:
-				document.selection_end_index = document.cursor_index
-				if document.selection_start_index == -1:
-					document.selection_start_index = previous_index
-			else:
-				document.selection_start_index = -1
-				document.selection_end_index = -1
-		elif event.keycode == KEY_LEFT:
-			var previous_index = document.cursor_index
-			document.cursor_index = max(0, document.cursor_index - 1)
-			if event.shift_pressed:
-				document.selection_end_index = document.cursor_index
-				if document.selection_start_index == -1:
-					document.selection_start_index = previous_index
-			else:
-				document.selection_start_index = -1
-				document.selection_end_index = -1
-		elif event.keycode == KEY_UP:
-			document.cursor_index = get_cursor_index_vertical(-1)
-		elif event.keycode == KEY_DOWN:
-			document.cursor_index = get_cursor_index_vertical(1)
-
-		# Deletions
-		elif is_selected and (event.keycode == KEY_BACKSPACE or event.keycode == KEY_DELETE):
-			_delete_selection(document.selection_start_index, document.selection_end_index)
-			document.cursor_index = min(document.selection_start_index, document.selection_end_index)
-			document.selection_start_index = -1
+		match event.keycode:
+			KEY_LEFT:
+				document.cursor_index = get_cursor_index_horizontal(-1, event.ctrl_pressed)
+			KEY_RIGHT:
+				document.cursor_index = get_cursor_index_horizontal(1, event.ctrl_pressed)
+			KEY_UP:
+				document.cursor_index = get_cursor_index_vertical(-1)
+			KEY_DOWN:
+				document.cursor_index = get_cursor_index_vertical(1)
+			KEY_DELETE, KEY_BACKSPACE:
+				if is_selected:
+					_delete_selection(document.selection_start_index, document.selection_end_index)
+					document.cursor_index = min(document.selection_start_index, document.selection_end_index)
+				elif event.keycode == KEY_DELETE:
+					var to = get_cursor_index_horizontal(1, event.ctrl_pressed)
+					_delete_selection(document.cursor_index, to)
+				else:
+					var to = get_cursor_index_horizontal(-1, event.ctrl_pressed)
+					_delete_selection(document.cursor_index, to)
+					document.cursor_index = max(0, document.cursor_index - 1)
+			KEY_ENTER, KEY_KP_ENTER:
+				_insert_text_with_style(" ", [{"type": "br"}], document.cursor_index)
+				document.cursor_index += 1
+			_:
+				if event.ctrl_pressed and is_selected:
+					match event.keycode:
+						KEY_B:
+							_apply_style(document.selection_start_index, document.selection_end_index, [{"type": "b"}])
+						KEY_I:
+							_apply_style(document.selection_start_index, document.selection_end_index, [{"type": "i"}])
+						KEY_U:
+							_apply_style(document.selection_start_index, document.selection_end_index, [{"type": "u"}])
+						KEY_K:
+							_apply_style(document.selection_start_index, document.selection_end_index, [{"type": "s"}])
+				elif event.unicode > 31:
+					_insert_text_with_style(char(event.unicode), [], document.cursor_index)
+					document.cursor_index += 1
+		if event.shift_pressed:
+			if not is_selected:
+				document.selection_start_index = previous_cursor
+			document.selection_end_index = document.cursor_index
+		elif event.keycode not in [KEY_CTRL, KEY_SHIFT, KEY_ALT, KEY_CAPSLOCK, KEY_META]:
 			document.selection_end_index = -1
-		elif event.keycode == KEY_BACKSPACE:
-			if event.ctrl_pressed:
-				_delete_word(-1)
-			else:
-				_delete_character(-1)
-		elif event.keycode == KEY_DELETE:
-			if event.ctrl_pressed:
-				_delete_word(1)
-			else:
-				_delete_character(1)
-				
-		# Insertions
-		elif event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			_insert_text_with_style(" ", [ {"type": "br"}])
-			document.cursor_index += 1
-		elif event.unicode > 31:
-			_insert_text_with_style(char(event.unicode), [])
-			document.cursor_index += 1
+			document.selection_start_index = -1
 		update()
 	
 	# Selection mouse support
@@ -139,19 +134,43 @@ func _get_pos_at_index(index: int) -> Vector2:
 
 func get_cursor_index_vertical(direction: int) -> int:
 	var pos: Vector2 = _get_pos_at_index(document.cursor_index)
-	print(pos)
 	pos.y += direction * document.font_size
-	print(pos)
 	return _get_cursor_index_at_pos(pos)
 
-func _insert_text_with_style(new_text: String, new_style: Array) -> void:
+func get_cursor_index_horizontal(direction: int, ctrl_pressed: bool) -> int:
+	if ctrl_pressed:
+		return _find_next_word_index(direction)
+	else:
+		if direction < 0:
+			return max(0, document.cursor_index - 1)
+		else:
+			return min(_total_length(), document.cursor_index + 1)
+
+func _apply_style(from: int, to: int, style: Array) -> void:
+	var deleted_segments: Array = _delete_selection(from, to)
+	print(deleted_segments)
+	var index: int = min(from, to)
+	for seg in deleted_segments:
+		var new_style: Array = seg["style"]
+		var text: String = seg["text"]
+		var text_len: int = text.length()
+		for s in style:
+			if new_style.has(s):
+				new_style.erase(s)
+			else:
+				new_style.append(s)
+		_insert_text_with_style(text, new_style, index)
+		index += text_len
+		print(seg)
+
+func _insert_text_with_style(new_text: String, new_style: Array, index: int) -> void:
 	var new_segments: Array = []
 	var total: int = 0
 	var inserted: bool = false
 	for seg in document.segments:
 		var text: String = seg["text"]
-		if not inserted and document.cursor_index <= total + text.length():
-			var local_index = document.cursor_index - total
+		if not inserted and index <= total + text.length():
+			var local_index = index - total
 			new_segments.append({"text": text.substr(0, local_index), "style": seg["style"].duplicate()})
 			new_segments.append({"text": new_text, "style": new_style})
 			new_segments.append({"text": text.substr(local_index), "style": seg["style"].duplicate()})
@@ -195,8 +214,34 @@ func _delete_word(direction: int) -> String:
 			removed_word += removed_char
 	return removed_word
 
-func _delete_selection(from: int, to: int) -> String:
-	var result: String = ""
+func _find_next_word_index(direction: int) -> int:
+	const word_separator: Array = [" ", ".", ",", ";", ":", "/", "-", "_", "(", ")", "[", "]", "{", "}", "|", "\\", "<", ">", "=", "+"]
+	var before: int = 0
+	var after: int = 0
+	var total: int = 0
+	var found: bool = false
+	for seg in document.segments:
+		var text: String = seg["text"]
+		for c in text:
+			if word_separator.has(c):
+				if total < document.cursor_index:
+					before = total
+				elif total > document.cursor_index:
+					after = total
+					found = true
+					break
+			total += 1
+		if found:
+			break
+	if direction < 0:
+		return before
+	else:
+		return after
+
+func _delete_selection(from: int, to: int) -> Array:
+	from = clamp(from, 0, _total_length())
+	to = clamp(to, 0, _total_length())
+	var deleted_segments: Array = []
 	if from > to:
 		var tmp: int = from
 		from = to
@@ -204,6 +249,7 @@ func _delete_selection(from: int, to: int) -> String:
 	var total: int = 0
 	for seg in document.segments:
 		var text: String = seg["text"]
+		var style: Array = seg["style"].duplicate()
 		var text_len: int = text.length()
 		if total >= to:
 			break
@@ -213,13 +259,14 @@ func _delete_selection(from: int, to: int) -> String:
 		var local_from: int = max(from - total, 0)
 		var local_to: int = min(to - total, text_len)
 		var local_len: int = local_to - local_from
-		result += text.substr(local_from, local_len)
+		deleted_segments.append({"text": text.substr(local_from, local_len), "style": style})
 		text = text.substr(0, local_from) + text.substr(local_from + local_len)
 		seg["text"] = text
-	return result
+		total += text_len
+	return deleted_segments
 
 func _total_length():
-	var total := 0
+	var total: int = 0
 	for seg in document.segments:
 		total += seg["text"].length()
 	return total
@@ -262,6 +309,8 @@ func add_trailing_break() -> void:
 		document.segments.append({"text": " ", "style": [{"type": "br"}]})
 
 func styles_equal(style_a: Array, style_b: Array):
+	if style_a.size() != style_b.size():
+		return false
 	for s in style_a:
 		if not style_b.has(s):
 			return false
