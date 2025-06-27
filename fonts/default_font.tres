@@ -1,0 +1,6 @@
+[gd_resource type="FontVariation" load_steps=2 format=3 uid="uid://bc2kgmnhuxpt4"]
+
+[ext_resource type="FontFile" uid="uid://56tkn4517wqq" path="res://fonts/Inter-Regular.ttf" id="1_m0ihf"]
+
+[resource]
+base_font = ExtResource("1_m0ihf")

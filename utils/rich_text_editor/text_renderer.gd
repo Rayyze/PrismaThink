@@ -2,96 +2,95 @@ extends Control
 
 # Self-managed variables
 var document: Node
-var custom_theme: Resource = preload("res://themes/default_theme.tres")
-var font_regular: Resource
-var font_bold: Resource
-var font_italic: Resource
-var font_bold_italic: Resource
+var ts: TextServer
+var font_rids: Dictionary
 
 func _ready():
-	var default_theme: Resource = load("res://themes/default_theme.tres")
+	ts = TextServerManager.get_primary_interface()
+	font_rids = {
+		"regular": ts.create_font(),
+		"italic": ts.create_font(),
+		"bold": ts.create_font(),
+		"bold-italic": ts.create_font()}
+	var font_data: PackedByteArray = FileAccess.get_file_as_bytes("res://fonts/Inter-Regular.ttf")
+	for font_name in font_rids:
+		ts.font_set_data(font_rids[font_name], font_data)
+	var skew := Transform2D(0.0, Vector2(1.0, 1.0), 0.3, Vector2.ZERO)
+	ts.font_set_transform(font_rids["italic"], skew)
+	ts.font_set_transform(font_rids["bold-italic"], skew)
+	ts.font_set_embolden(font_rids["bold"], 0.2)
+	ts.font_set_embolden(font_rids["bold-italic"], 0.2)
+
 	document = get_node("../RichTextDocument")
-	font_regular = default_theme.get_font("regular_font", "rich_text_editor")
-	font_bold = default_theme.get_font("bold_font", "rich_text_editor")
-	font_italic = default_theme.get_font("italic_font", "rich_text_editor")
-	font_bold_italic = default_theme.get_font("bold_italic_font", "rich_text_editor")
-	document.font_size = ThemeDB.fallback_font_size
 
 func _draw():
-	var x: float = 10
-	var y: float = 10
-	var total: int = 0
-	var col: Color
-	var is_selected: bool = document.selection_start_index != -1 and document.selection_end_index != -1
-	var sel_from: int = min(document.selection_start_index, document.selection_end_index)
-	var sel_to: int = max(document.selection_start_index, document.selection_end_index)
+	var x := 10.0
+	var y := 10.0
+	var total := 0
 
 	for seg in document.segments:
 		var text: String = seg["text"]
 		var style: Array = seg["style"]
 
-		var f: Font = get_font_from_style(style)
-		var new_line: bool = false
-		col = Color.WHITE
-		var has_underline: bool = false
-		var has_strike: bool = false
+		var color := Color.WHITE
+		var underline := false
+		var strikethrough := false
+		var has_bold := false
+		var has_italic := false
 
+		# Extract styling
 		for s in style:
-			if s.get("type", "") == "color":
-				col = Color(s["value"])
-			if s.get("type", "") == "br":
-				new_line = true
-			if s.get("type", "") == "u":
-				has_underline = true
-			if s.get("type", "") == "s":
-				has_strike = true
+			match s.get("type", ""):
+				"color": color = Color(s["value"])
+				"u": underline = true
+				"s": strikethrough = true
+				"b": has_bold = true
+				"i": has_italic = true
 
-		for i in text.length():
-			var char_string: String = text[i]
-			var char_code: int = text.unicode_at(i)
-			var char_width = f.get_char_size(char_code, document.font_size).x
+		var font: Font = document.font
 
-			# Draw selection background
-			if is_selected and (total >= sel_from and total < sel_to):
-				draw_rect(Rect2(Vector2(x, y), Vector2(char_width, f.get_height())), Color(0.2, 0.5, 1.0, 0.4))
+		# Prepare shaped text
+		var st := ts.create_shaped_text(TextServer.DIRECTION_AUTO, TextServer.ORIENTATION_HORIZONTAL)
+		var font_rid: RID = get_font_rid_from_style(has_bold, has_italic)
+		ts.shaped_text_add_string(st, text, [font_rid], document.font_size)
+		ts.shaped_text_shape(st)
 
-			# Draw character
-			f.draw_string(get_canvas_item(), Vector2(x, y + document.font_size), char_string, HORIZONTAL_ALIGNMENT_LEFT, -1, document.font_size, col)
+		var glyphs := ts.shaped_text_get_glyphs(st)
+		print(glyphs)
+		for g in glyphs:
+			var pos: Vector2 = Vector2(x, y) + g.offset
 
-			# Draw strikethrough and underline
-			if has_underline:
-				var underline_y = y + document.font_size + 1
-				draw_line(Vector2(x, underline_y), Vector2(x + char_width, underline_y), col, 1.0)
-			if has_strike:
-				var strike_y = y + document.font_size * 0.5
-				draw_line(Vector2(x, strike_y), Vector2(x + char_width, strike_y), col, 1.0)
+			# Selection background
+			if document.selection_start_index <= total and total < document.selection_end_index:
+				draw_rect(Rect2(pos, Vector2(g.advance, font.get_height())), Color(0.2, 0.5, 1.0, 0.4))
 
-			# Update cursor position
-			if document.cursor_index == total:
-				document.cursor_pos = Vector2(x, y)
+			# Draw the glyph
+			ts.font_draw_glyph(font_rid, get_canvas_item(), document.font_size, pos, g.index, color)
 
-			x += char_width
+			# Underline and strikethrough
+			if underline:
+				var uy = y + document.font_size * 1.25
+				draw_line(Vector2(pos.x, uy), Vector2(pos.x + g.advance, uy), color, 1.0)
+			if strikethrough:
+				var sy = y + document.font_size * 0.75
+				draw_line(Vector2(pos.x, sy), Vector2(pos.x + g.advance, sy), color, 1.0)
+
+			x += g.advance
 			total += 1
-			if new_line:
-				y += document.font_size
+
+		# Newlines
+		for s in style:
+			if s.get("type", "") == "br":
 				x = 10
+				y += document.font_size
 
-	# Final cursor check (in case it's at the end of the last segment)
-	if document.cursor_index == total:
-		document.cursor_pos = Vector2(x, y)
 
-func get_font_from_style(style: Array):
-	var has_bold: bool = false
-	var has_italic: bool = false
-	for s in style:
-		match s.get("type", ""):
-			"b": has_bold = true
-			"i": has_italic = true
-	if has_bold and has_italic:
-		return font_bold_italic
+func get_font_rid_from_style(has_bold: bool, has_italic: bool) -> RID:
+	if has_italic && has_bold:
+		return font_rids["bold-italic"]
 	elif has_bold:
-		return font_bold
+		return font_rids["bold"]
 	elif has_italic:
-		return font_italic
+		return font_rids["italic"]
 	else:
-		return font_regular
+		return font_rids["regular"]
