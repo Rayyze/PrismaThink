@@ -66,7 +66,7 @@ func _input(event):
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				is_dragging = true
-				var new_index = _get_cursor_index_at_pos(event.position)
+				var new_index = text_renderer.get_cursor_index_at_pos(event.position)
 				if Input.is_key_pressed(KEY_SHIFT):
 					if document.selection_start_index == -1:
 						document.selection_start_index = document.cursor_index
@@ -81,76 +81,15 @@ func _input(event):
 
 	# Mouse drag
 	elif event is InputEventMouseMotion and is_dragging:
-		var new_index = _get_cursor_index_at_pos(event.position)
+		var new_index = text_renderer.get_cursor_index_at_pos(event.position)
 		document.selection_end_index = new_index
 		document.cursor_index = new_index
 		update()
 
-func _get_cursor_index_at_pos(target_pos: Vector2) -> int:
-	var pos: Vector2 = Vector2(10.0, 10.0 + document.font_size* 0.5)
-	var dist: Array = []
-	var indices: Array = []
-	var total: int = 0
-	var same_line_dist: Array = []
-	var same_line_indices: Array = []
-
-	for seg in document.segments:
-		var text: String = seg["text"]
-		var style: Array = seg["style"]
-		var f: Font = text_renderer.get_font_from_style(style)
-		for i in text.length():
-			var d := eucl_dist_sq(pos, target_pos)
-			if abs(pos.y - target_pos.y) < document.font_size * 0.5:
-				same_line_dist.append(d)
-				same_line_indices.append(total)
-			var char_code: int = text.unicode_at(i)
-			var char_width: float = f.get_char_size(char_code, document.font_size).x
-			pos.x += char_width
-			total += 1
-			dist.append(d)
-			indices.append(total)
-		for s in style:
-			if s.get("type", "") == "br":
-				pos.x = 10
-				pos.y += document.font_size
-	print(dist)
-	if not same_line_indices.is_empty():
-		print(same_line_indices[same_line_dist.find(same_line_dist.min())])
-		return same_line_indices[same_line_dist.find(same_line_dist.min())]
-	elif indices.size() > 0:
-		print( indices[dist.find(dist.min())])
-		return indices[dist.find(dist.min())]
-	else:
-		return 0
-
-func _get_pos_at_index(index: int) -> Vector2:
-	var pos: Vector2 = Vector2(10.0, 10.0 + document.font_size/2)
-	var total: int = 0
-	var found: bool = false
-	for seg in document.segments:
-		var text: String = seg["text"]
-		var style: Array = seg["style"]
-		var f: Font = text_renderer.get_font_from_style(style)
-		for i in text.length():
-			if total == index:
-				found = true
-				break
-
-			var char_code: int = text.unicode_at(i)
-			pos.x += f.get_char_size(char_code, document.font_size).x
-			total += 1
-		if found:
-			break
-		for s in style:
-			if s.get("type", "") == "br":
-				pos.x = 10
-				pos.y += document.font_size
-	return pos
-
 func get_cursor_index_vertical(direction: int) -> int:
-	var pos: Vector2 = _get_pos_at_index(document.cursor_index)
+	var pos: Vector2 = text_renderer.get_pos_at_index(document.cursor_index)
 	pos.y += direction * document.font_size
-	return _get_cursor_index_at_pos(pos)
+	return text_renderer.get_cursor_index_at_pos(pos)
 
 func get_cursor_index_horizontal(direction: int, ctrl_pressed: bool) -> int:
 	if ctrl_pressed:
@@ -333,8 +272,5 @@ func styles_equal(style_a: Array, style_b: Array):
 func update():
 	add_trailing_break()
 	document.segments = merge_adjacent_segments(clean_empty_segments(document.segments))
-	document.cursor_pos = _get_pos_at_index(document.cursor_index) - Vector2(0.0, document.font_size/2)
+	document.cursor_pos = text_renderer.get_pos_at_index(document.cursor_index)
 	text_renderer.queue_redraw()
-
-func eucl_dist_sq(a: Vector2, b: Vector2) -> float:
-	return pow(a.x - b.x, 2) + pow(a.y - b.y, 2)
