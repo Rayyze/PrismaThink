@@ -6,6 +6,7 @@ var is_dragging: bool = false
 
 func _ready():
 	text_renderer = find_child("TextRenderer")
+	text_renderer.connect("cache_updated", Callable(self, "on_cache_updated"))
 	document = find_child("RichTextDocument")
 	set_process_input(true)
 	set_focus_mode(FOCUS_ALL)
@@ -14,6 +15,7 @@ func _ready():
 func _input(event):
 	var is_selected: bool = document.selection_start_index != -1 and document.selection_end_index != -1
 	var previous_cursor: int = document.cursor_index
+	var should_break_selection: bool = false
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_LEFT:
@@ -40,6 +42,7 @@ func _input(event):
 				document.cursor_index += 1
 			_:
 				if event.ctrl_pressed and is_selected:
+					should_break_selection = true
 					match event.keycode:
 						KEY_B:
 							_apply_style(document.selection_start_index, document.selection_end_index, [{"type": "b"}])
@@ -52,7 +55,7 @@ func _input(event):
 				elif event.unicode > 31:
 					_insert_text_with_style(char(event.unicode), [], document.cursor_index)
 					document.cursor_index += 1
-		if event.shift_pressed:
+		if event.shift_pressed || should_break_selection:
 			if not is_selected:
 				document.selection_start_index = previous_cursor
 			document.selection_end_index = document.cursor_index
@@ -66,7 +69,7 @@ func _input(event):
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				is_dragging = true
-				var new_index = text_renderer.get_cursor_index_at_pos(event.position)
+				var new_index = text_renderer.get_cursor_index_at_pos(event.position + Vector2(0.0, document.font_size))
 				if Input.is_key_pressed(KEY_SHIFT):
 					if document.selection_start_index == -1:
 						document.selection_start_index = document.cursor_index
@@ -272,5 +275,7 @@ func styles_equal(style_a: Array, style_b: Array):
 func update():
 	add_trailing_break()
 	document.segments = merge_adjacent_segments(clean_empty_segments(document.segments))
-	document.cursor_pos = text_renderer.get_pos_at_index(document.cursor_index)
 	text_renderer.queue_redraw()
+
+func on_cache_updated():
+	document.cursor_pos = text_renderer.get_pos_at_index(document.cursor_index)

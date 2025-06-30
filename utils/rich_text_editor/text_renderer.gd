@@ -1,5 +1,7 @@
 extends Control
 
+signal cache_updated
+
 # Self-managed variables
 var document: Node
 var ts: TextServer
@@ -64,23 +66,24 @@ func _draw():
 		for g in glyphs:
 			glyphs_data_cache.append({"pos": pos, "index": total})
 			var glyph_pos: Vector2 = pos + g.offset
+			var real_advance: float = g.advance + inter_char
 
 			# Selection background
 			if sel_min <= total and total < sel_max:
-				draw_rect(Rect2(glyph_pos, Vector2(g.advance + inter_char, -document.font_size)), Color(0.2, 0.5, 1.0, 0.4))
+				draw_rect(Rect2(glyph_pos, Vector2(real_advance, -document.font_size)), Color(0.2, 0.5, 1.0, 0.4))
 
 			# Draw the glyph
 			ts.font_draw_glyph(font_rid, get_canvas_item(), document.font_size, glyph_pos, g.index, color)
 
 			# Underline and strikethrough
 			if underline:
-				var uy = pos.y + document.font_size * 1.25
-				draw_line(Vector2(glyph_pos.x, uy), Vector2(glyph_pos.x + g.advance, uy), color, 1.0)
+				var uy = pos.y + document.font_size * 0.25
+				draw_line(Vector2(glyph_pos.x, uy), Vector2(glyph_pos.x + real_advance, uy), color, 1.0)
 			if strikethrough:
-				var sy = pos.y + document.font_size * 0.75
-				draw_line(Vector2(glyph_pos.x, sy), Vector2(glyph_pos.x + g.advance, sy), color, 1.0)
+				var sy = pos.y - document.font_size * 0.25
+				draw_line(Vector2(glyph_pos.x, sy), Vector2(glyph_pos.x + real_advance, sy), color, 1.0)
 
-			pos.x += g.advance + inter_char
+			pos.x += real_advance
 			total += 1
 
 		# Newlines
@@ -88,18 +91,23 @@ func _draw():
 			if s.get("type", "") == "br":
 				pos.x = 10
 				pos.y += document.font_size
+	emit_signal("cache_updated")
 
 func get_cursor_index_at_pos(target_pos: Vector2) -> int:
-	var min_y: float = INF
-	var min_x: float = INF
-	var min_index: int = 0
+	var best_y_diff := INF
+	var best_line_y := 0.0
 	for glyph_data in glyphs_data_cache:
-		if min_y > abs(glyph_data["pos"].y - target_pos.y):
-			min_y = glyph_data["pos"].y
+		var dy = abs(glyph_data["pos"].y - target_pos.y)
+		if dy < best_y_diff:
+			best_y_diff = dy
+			best_line_y = glyph_data["pos"].y
+	var best_x_diff := INF
+	var min_index := 0
 	for glyph_data in glyphs_data_cache:
-		if min_y == glyph_data["pos"].y:
-			if min_x > abs(glyph_data["pos"].x - target_pos.x):
-				min_x = glyph_data["pos"].x
+		if abs(glyph_data["pos"].y - best_line_y) < 0.5:
+			var dx = abs(glyph_data["pos"].x - target_pos.x)
+			if dx < best_x_diff:
+				best_x_diff = dx
 				min_index = glyph_data["index"]
 	return min_index
 
