@@ -35,25 +35,21 @@ func _ready():
 
 	document = get_node("../RichTextDocument")
 
+func _draw() -> void:
+	layout_text()
+	breakpoints_scan()
+	draw_glyphs()
+
 func layout_text():	
-	glyphs_data_cache = []
+	glyphs_data_cache.clear()
 	var pos: Vector2 = text_origin
 	var total: int = 0
-	breakpoints_data_cache = []
-	var available_width: float = size.x
-	print(available_width)
-	var last_breakpoint: int = -1
-	var line_start_x: float = text_origin.x
+	breakpoints_data_cache.clear()
 
 	for seg in document.segments:
 		var text: String = seg["text"]
 		var style: Array = seg["style"]
-
 		var color: Color = Color.WHITE
-		var underline: bool = false
-		var strikethrough: bool = false
-		var has_bold: bool = false
-		var has_italic: bool = false
 		var newline: bool = false
 
 		# Extract styling
@@ -69,18 +65,15 @@ func layout_text():
 
 		# Prepare shaped text
 		var st: RID = ts.create_shaped_text(TextServer.DIRECTION_AUTO, TextServer.ORIENTATION_HORIZONTAL)
-		var font_rid: RID = get_font_rid_from_style(has_bold, has_italic)
+		var font_rid: RID = get_font_rid_from_style(style_mask & STYLE_BOLD, style_mask & STYLE_ITALIC)
 		ts.shaped_text_add_string(st, text, [font_rid], document.font_size)
 		ts.shaped_text_shape(st)
 
 		var glyphs := ts.shaped_text_get_glyphs(st)
-		var i: int = 0
 		for g in glyphs:
-			print(text[i], " at ", pos)
-			print(color)
 			var glyph_pos: Vector2 = pos + g.offset
-			glyphs_data_cache.append({"pos": glyph_pos, "index": total, "style_mask": style_mask, "color": color})
 			var real_advance: float = g.advance + inter_char
+			glyphs_data_cache.append({"pos": glyph_pos, "advance": real_advance, "index": total, "style_mask": style_mask, "color": color, "char": g.index})
 			pos.x += real_advance
 			total += 1
 
@@ -88,95 +81,32 @@ func layout_text():
 		if newline:
 			pos.x = text_origin.x
 			pos.y += document.font_size
-			last_breakpoint = -1
-			line_start_x = pos.x
+		ts.free_rid(st)
+	emit_signal("cache_updated")
 
-func _draw():
-	print(document.segments)
-	glyphs_data_cache = []
+func draw_glyphs():
 	var sel_min = min(document.selection_start_index, document.selection_end_index)
 	var sel_max = max(document.selection_start_index, document.selection_end_index)
 	var pos: Vector2 = text_origin
 	var total: int = 0
-	breakpoints_data_cache = []
-	var available_width: float = size.x
-	print(available_width)
-	var last_breakpoint: int = -1
-	var line_start_x: float = text_origin.x
 
-	for seg in document.segments:
-		var text: String = seg["text"]
-		var style: Array = seg["style"]
+	for glyph_data in glyphs_data_cache:
+		var font_rid: RID = get_font_rid_from_style(glyph_data["style_mask"] & STYLE_BOLD, glyph_data["style_mask"] & STYLE_ITALIC)
 
-		var color: Color = Color.WHITE
-		var underline: bool = false
-		var strikethrough: bool = false
-		var has_bold: bool = false
-		var has_italic: bool = false
-		var newline: bool = false
+		# Selection background
+		if sel_min <= total and total < sel_max:
+			draw_rect(Rect2(glyph_data["pos"], Vector2(glyph_data["advance"], -document.font_size)), Color(0.2, 0.5, 1.0, 0.4))
 
-		# Extract styling
-		for s in style:
-			match s.get("type", ""):
-				"color": color = Color(s["value"])
-				"u": underline = true
-				"s": strikethrough = true
-				"b": has_bold = true
-				"i": has_italic = true
-				"br": newline = true
+		# Draw the glyph
+		ts.font_draw_glyph(font_rid, get_canvas_item(), document.font_size, glyph_data["pos"], glyph_data["char"], glyph_data["color"])
 
-		# Prepare shaped text
-		var st: RID = ts.create_shaped_text(TextServer.DIRECTION_AUTO, TextServer.ORIENTATION_HORIZONTAL)
-		var font_rid: RID = get_font_rid_from_style(has_bold, has_italic)
-		ts.shaped_text_add_string(st, text, [font_rid], document.font_size)
-		ts.shaped_text_shape(st)
-
-		var glyphs := ts.shaped_text_get_glyphs(st)
-		var i: int = 0
-		for g in glyphs:
-			print(text[i], " at ", pos)
-			glyphs_data_cache.append({"pos": pos, "index": total})
-			var glyph_pos: Vector2 = pos + g.offset
-			var real_advance: float = g.advance + inter_char
-
-			# Handle and cache autowrap positions
-			var dx: float = pos.x - line_start_x
-			if document.word_separators.has(text[i]):
-				last_breakpoint = total + 1
-			if dx > available_width:
-				print(dx, " for ", text[i])
-				if last_breakpoint == -1:
-					breakpoints_data_cache.append(total + 1)
-				else:
-					breakpoints_data_cache.append(last_breakpoint)
-				newline = true
-			i += 1
-
-			# Selection background
-			if sel_min <= total and total < sel_max:
-				draw_rect(Rect2(glyph_pos, Vector2(real_advance, -document.font_size)), Color(0.2, 0.5, 1.0, 0.4))
-
-			# Draw the glyph
-			ts.font_draw_glyph(font_rid, get_canvas_item(), document.font_size, glyph_pos, g.index, color)
-
-			# Underline and strikethrough
-			if underline:
-				var uy = pos.y + document.font_size * 0.25
-				draw_line(Vector2(glyph_pos.x, uy), Vector2(glyph_pos.x + real_advance, uy), color, 1.0)
-			if strikethrough:
-				var sy = pos.y - document.font_size * 0.25
-				draw_line(Vector2(glyph_pos.x, sy), Vector2(glyph_pos.x + real_advance, sy), color, 1.0)
-
-			pos.x += real_advance
-			total += 1
-
-		# Newlines
-		if newline:
-			pos.x = text_origin.x
-			pos.y += document.font_size
-			last_breakpoint = -1
-			line_start_x = pos.x
-	emit_signal("cache_updated")
+		# Underline and strikethrough
+		if glyph_data["style_mask"] & STYLE_UNDERLINE:
+			var uy = pos.y + document.font_size * 0.25
+			draw_line(Vector2(glyph_data["pos"].x, uy), Vector2(glyph_data["pos"].x + glyph_data["advance"], uy), glyph_data["color"], 1.0)
+		if glyph_data["style_mask"] & STYLE_STRIKETHROUGH:
+			var sy = pos.y - document.font_size * 0.25
+			draw_line(Vector2(glyph_data["pos"].x, sy), Vector2(glyph_data["pos"].x + glyph_data["advance"], sy), glyph_data["color"], 1.0)
 
 func get_cursor_index_at_pos(target_pos: Vector2) -> int:
 	var best_y_diff := INF
@@ -221,7 +151,7 @@ func breakpoints_scan():
 	for glyph_data in glyphs_data_cache:
 		var pos = glyph_data["pos"]
 		var dx: float = pos.x - line_start_x
-		if document.word_separator.has(glyph_data["char"]):
+		if document.word_separators.has(glyph_data["char"]):
 			last_breakpoint = glyph_data["index"] + 1
 		if dx > available_width:
 			if last_breakpoint == -1:
