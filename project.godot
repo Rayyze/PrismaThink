@@ -14,6 +14,10 @@ config/name="PrismaThink"
 config/features=PackedStringArray("4.4", "Mobile")
 config/icon="res://icon.svg"
 
+[dotnet]
+
+project/assembly_name="PrismaThink"
+
 [rendering]
 
 renderer/rendering_method="mobile"
