@@ -1,19 +1,24 @@
-[gd_scene format=3 uid="uid://ce4guk7c3x2c2"]
+[gd_scene load_steps=3 format=3 uid="uid://ce4guk7c3x2c2"]
 
-[node name="NoteDisplay" type="Control"]
-layout_mode = 3
-anchors_preset = 0
+[ext_resource type="Script" uid="uid://rl07mhreaaxt" path="res://scripts/displays/note_display.gd" id="1_k1wb3"]
+[ext_resource type="Script" uid="uid://dbw5msa5ehoxk" path="res://scripts/displays/resize_control.gd" id="2_3wo4x"]
+
+[node name="NoteDisplay" type="Panel"]
 offset_right = 40.0
 offset_bottom = 40.0
+script = ExtResource("1_k1wb3")
 
-[node name="RichTextLabel" type="RichTextLabel" parent="."]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-bbcode_enabled = true
-text = "test"
+[node name="ResizeControl" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -15.0
+offset_top = -15.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("2_3wo4x")
 
-[node name="TextEdit" type="TextEdit" parent="."]
-layout_mode = 0
-offset_right = 32.0
-offset_bottom = 22.0
+[connection signal="parent_resized" from="ResizeControl" to="." method="_on_resize_control_parent_resized"]

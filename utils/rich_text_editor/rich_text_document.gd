@@ -11,4 +11,4 @@ var segments: Array = [
 	{"text": "bold", "style": [{"type": "b"}]}
 ]
 const word_separators: Array = [" ", ".", ",", ";", ":", "/", "-", "_", "(", ")", "[", "]", "{", "}", "|", "\\", "<", ">", "=", "+"]
-var max_width: float = 200
+var edit_mode: bool = true

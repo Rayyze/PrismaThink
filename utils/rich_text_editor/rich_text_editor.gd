@@ -6,13 +6,25 @@ var is_dragging: bool = false
 
 func _ready():
 	text_renderer = find_child("TextRenderer")
-	text_renderer.connect("cache_updated", Callable(self, "on_cache_updated"))
+	text_renderer.connect("glyph_cache_updated", Callable(self, "on_glyph_cache_updated"))
 	document = find_child("RichTextDocument")
 	set_process_input(true)
 	set_focus_mode(FOCUS_ALL)
 	grab_focus()
 
+func _unhandled_input(event):
+	if event is InputEventMouseButton and event.pressed:
+		if !get_global_rect().has_point(get_global_mouse_position()):
+			release_focus()
+			document.edit_mode = false
+			if document.edit_mode:
+				mouse_filter = Control.MOUSE_FILTER_STOP
+			else:
+				mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 func _input(event):
+	if !document.edit_mode:
+		return
 	var is_selected: bool = document.selection_start_index != -1 and document.selection_end_index != -1
 	var previous_cursor: int = document.cursor_index
 	var should_break_selection: bool = false
@@ -101,11 +113,10 @@ func get_cursor_index_horizontal(direction: int, ctrl_pressed: bool) -> int:
 		if direction < 0:
 			return max(0, document.cursor_index - 1)
 		else:
-			return min(_total_length(), document.cursor_index + 1)
+			return min(text_renderer.get_total_glyphs(), document.cursor_index + 1)
 
 func _apply_style(from: int, to: int, style: Array) -> void:
 	var deleted_segments: Array = _delete_selection(from, to)
-	print(deleted_segments)
 	var index: int = min(from, to)
 	for seg in deleted_segments:
 		var new_style: Array = seg["style"]
@@ -118,7 +129,6 @@ func _apply_style(from: int, to: int, style: Array) -> void:
 				new_style.append(s)
 		_insert_text_with_style(text, new_style, index)
 		index += text_len
-		print(seg)
 
 func _insert_text_with_style(new_text: String, new_style: Array, index: int) -> void:
 	var new_segments: Array = []
@@ -277,5 +287,5 @@ func update():
 	document.segments = merge_adjacent_segments(clean_empty_segments(document.segments))
 	text_renderer.queue_redraw()
 
-func on_cache_updated():
+func on_glyph_cache_updated():
 	document.cursor_pos = text_renderer.get_pos_at_index(document.cursor_index)
