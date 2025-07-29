@@ -210,7 +210,7 @@ func get_font_rid_from_style(has_bold: bool, has_italic: bool) -> RID:
 
 func breakpoints_scan():
 	breakpoints_data_cache = []
-	var available_width: float = size.x
+	var available_width: float = get_parent().size.x
 	var last_breakpoint: int = -1
 	var last_y: float = text_origin.y
 	var line_start_x: float = text_origin.x
