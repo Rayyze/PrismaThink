@@ -11,7 +11,7 @@ func _process(delta):
 func update_shader_parameters():
 	print("offset: ")
 	print(pan_offset)
-	print("zomm: ")
+	print("zoom: ")
 	print(zoom)
 	var shader_offset = -pan_offset * zoom
 	background_material.set_shader_parameter("offset", shader_offset)

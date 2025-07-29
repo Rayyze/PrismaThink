@@ -12,16 +12,10 @@ offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("1_ko8tg")
 
-[node name="TextRenderer" type="Control" parent="."]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="TextRenderer" type="Node2D" parent="."]
 script = ExtResource("2_5vocg")
 
-[node name="CursorRenderer" type="Control" parent="."]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="CursorRenderer" type="Node2D" parent="."]
 script = ExtResource("3_ij7m4")
 
 [node name="RichTextDocument" type="Node" parent="."]

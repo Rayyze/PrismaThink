@@ -1,4 +1,4 @@
-extends Control
+extends Node2D
 
 var old_cursor_pos: Vector2
 var cursor_visible := true
@@ -19,5 +19,5 @@ func _process(delta):
 		queue_redraw()
 
 func _draw() -> void:
-	if cursor_visible:
+	if cursor_visible and document.edit_mode:
 		draw_line(document.cursor_pos, document.cursor_pos - Vector2(0, document.font_size), Color.WHITE, 1)
