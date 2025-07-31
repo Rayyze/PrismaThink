@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://gys248qnn2lf"]
 
-[ext_resource type="Script" uid="uid://bg75dh4eocboy" path="res://utils/rich_text_editor/rich_text_editor.gd" id="1_ko8tg"]
+[ext_resource type="Script" uid="uid://mtgi6y8m7165" path="res://utils/rich_text_editor/RichTextEditor.cs" id="1_ij7m4"]
 [ext_resource type="Script" uid="uid://t5ixa3kchom6" path="res://utils/rich_text_editor/text_renderer.gd" id="2_5vocg"]
 [ext_resource type="Script" uid="uid://cciqlvhudyx22" path="res://utils/rich_text_editor/cursor_renderer.gd" id="3_ij7m4"]
 [ext_resource type="Script" uid="uid://bj2ivr5860i77" path="res://utils/rich_text_editor/rich_text_document.gd" id="4_ij7m4"]
@@ -10,7 +10,7 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
-script = ExtResource("1_ko8tg")
+script = ExtResource("1_ij7m4")
 
 [node name="TextRenderer" type="Node2D" parent="."]
 script = ExtResource("2_5vocg")

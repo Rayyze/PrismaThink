@@ -12,4 +12,3 @@ var segments: Array = [
 ]
 const word_separators: Array = [" ", ".", ",", ";", ":", "/", "-", "_", "(", ")", "[", "]", "{", "}", "|", "\\", "<", ">", "=", "+"]
 var edit_mode: bool = true
-
